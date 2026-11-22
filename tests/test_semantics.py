@@ -79,12 +79,12 @@ def test_ledger_and_stats_roll_back_together(client, db_path):
     before = exposure(client, "B1", 0, 30)
     assert before["at_risk_bearing_days"] == 10
 
-    original = stats.store_segments
+    original = stats.reconcile_segments
 
-    def explode(conn, batch, segments):
+    def explode(conn, batch, deltas):
         raise RuntimeError("simulated failure while saving statistics")
 
-    stats.store_segments = explode
+    stats.reconcile_segments = explode
     try:
         with pytest.raises(RuntimeError):
             service.put_operation_interval(
@@ -95,7 +95,7 @@ def test_ledger_and_stats_roll_back_together(client, db_path):
                 __import__("datetime").date(2024, 1, 31),
             )
     finally:
-        stats.store_segments = original
+        stats.reconcile_segments = original
 
     assert exposure(client, "B1", 0, 30) == before
     bearing = client.get("/bearings/S1").json()
